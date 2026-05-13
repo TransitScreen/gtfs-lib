@@ -51,6 +51,7 @@ public class Stop extends Entity {
     public String feed_id;
     public String platform_code;
     public String stop_area_ids;
+    public String tts_stop_name;
 
     public static final String STOP_ID_FIELD = "stop_id";
     public static final String STOP_CODE_FIELD = "stop_code";
@@ -66,6 +67,7 @@ public class Stop extends Entity {
     public static final String WHEELCHAIR_BOARDING_FIELD = "wheelchair_boarding";
     public static final String PLATFORM_CODE_FIELD = "platform_code";
     public static final String STOP_AREA_IDS_FIELD = "stop_area_ids";
+    public static final String TTS_STOP_NAME_FIELD = "tts_stop_name";
 
     public static final String STOPS_FILE_NAME = "stops.txt";
     public static final String AREA_ID_FIELD = "area_id";
@@ -84,7 +86,8 @@ public class Stop extends Entity {
         PARENT_STATION_FIELD,
         STOP_TIMEZONE_FIELD,
         WHEELCHAIR_BOARDING_FIELD,
-        PLATFORM_CODE_FIELD
+        PLATFORM_CODE_FIELD,
+        TTS_STOP_NAME_FIELD
     };
 
     @Override
@@ -113,7 +116,8 @@ public class Stop extends Entity {
         statement.setString(oneBasedIndex++, stop_timezone);
         setIntParameter(statement, oneBasedIndex++, wheelchair_boarding);
         statement.setString(oneBasedIndex++, platform_code);
-        statement.setString(oneBasedIndex, stop_area_ids);
+        statement.setString(oneBasedIndex++, stop_area_ids);
+        statement.setString(oneBasedIndex, tts_stop_name);
     }
 
     public static class Loader extends Entity.Loader<Stop> {
@@ -147,6 +151,7 @@ public class Stop extends Entity {
             s.feed_id = feed.feedId;
             s.platform_code = getStringField(PLATFORM_CODE_FIELD, false);
             s.stop_area_ids = getStringField(STOP_AREA_IDS_FIELD, false);
+            s.tts_stop_name = getStringField(TTS_STOP_NAME_FIELD, false);
             /* TODO check ref integrity later, this table self-references via parent_station */
             // Attempting to put a null key or value will cause an NPE in BTreeMap
             if (s.stop_id != null) feed.stops.put(s.stop_id, s);
@@ -179,6 +184,7 @@ public class Stop extends Entity {
             writeStringField(s.stop_timezone);
             writeIntField(s.wheelchair_boarding);
             writeStringField(s.platform_code);
+            writeStringField(s.tts_stop_name);
             endRecord();
         }
 
@@ -283,7 +289,8 @@ public class Stop extends Entity {
             computeCsvValue(stop.parent_station),
             computeCsvValue(stop.stop_timezone),
             computeCsvValue(stop.wheelchair_boarding),
-            computeCsvValue(stop.platform_code)
+            computeCsvValue(stop.platform_code),
+            computeCsvValue(stop.tts_stop_name)
         )));
         return csvContent.toString();
     }

@@ -286,7 +286,8 @@ public class Table {
         new StringField("stop_timezone", OPTIONAL),
         new ShortField("wheelchair_boarding", OPTIONAL, 2),
         new StringField("platform_code", OPTIONAL),
-        new StringField("stop_area_ids", OPTIONAL)
+        new StringField("stop_area_ids", OPTIONAL),
+        new StringField("tts_stop_name", OPTIONAL)
     ).restrictDelete()
     .addPrimaryKey()
     .addPrimaryKeyNames("stop_id");
@@ -449,6 +450,7 @@ public class Table {
         // FIXME: Do we need an index on service_id
         new StringField("service_id", REQUIRED).isReferenceTo(CALENDAR).isReferenceTo(CALENDAR_DATES).isReferenceTo(SCHEDULE_EXCEPTIONS),
         new StringField("trip_headsign", OPTIONAL),
+        new StringField("tts_trip_headsign", OPTIONAL),
         new StringField("trip_short_name", OPTIONAL),
         new ShortField("direction_id", OPTIONAL, 1),
         new StringField("block_id", OPTIONAL),

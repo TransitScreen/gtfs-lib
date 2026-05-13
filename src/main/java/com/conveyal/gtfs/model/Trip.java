@@ -14,6 +14,7 @@ public class Trip extends Entity {
     public String service_id;
     public String trip_id;
     public String trip_headsign;
+    public String tts_trip_headsign;
     public String trip_short_name;
     public int    direction_id;
     public String block_id;
@@ -39,6 +40,7 @@ public class Trip extends Entity {
         statement.setString(oneBasedIndex++, route_id);
         statement.setString(oneBasedIndex++, service_id);
         statement.setString(oneBasedIndex++, trip_headsign);
+        statement.setString(oneBasedIndex++, tts_trip_headsign);
         statement.setString(oneBasedIndex++, trip_short_name);
         setIntParameter(statement, oneBasedIndex++, direction_id);
         statement.setString(oneBasedIndex++, block_id);
@@ -69,6 +71,7 @@ public class Trip extends Entity {
             t.service_id      = getStringField("service_id", true);
             t.trip_id         = getStringField("trip_id", true);
             t.trip_headsign   = getStringField("trip_headsign", false);
+            t.tts_trip_headsign   = getStringField("tts_trip_headsign", false);
             t.trip_short_name = getStringField("trip_short_name", false);
             t.direction_id    = getIntField("direction_id", false, 0, 1);
             t.block_id        = getStringField("block_id", false); // make a blocks multimap
@@ -99,7 +102,7 @@ public class Trip extends Entity {
         @Override
         protected void writeHeaders() throws IOException {
             // TODO: export shapes
-            writer.writeRecord(new String[] {"route_id", "trip_id", "trip_headsign", "trip_short_name", "direction_id", "block_id",
+            writer.writeRecord(new String[] {"route_id", "trip_id", "trip_headsign", "tts_trip_headsign", "trip_short_name", "direction_id", "block_id",
                     "shape_id", "bikes_allowed", "wheelchair_accessible", "service_id"});
         }
 
@@ -108,6 +111,7 @@ public class Trip extends Entity {
             writeStringField(t.route_id);
             writeStringField(t.trip_id);
             writeStringField(t.trip_headsign);
+            writeStringField(t.tts_trip_headsign);
             writeStringField(t.trip_short_name);
             writeIntField(t.direction_id);
             writeStringField(t.block_id);

@@ -197,6 +197,7 @@ public interface EntityPopulator<T> {
         stop.wheelchair_boarding = getIntIfPresent(result, Stop.WHEELCHAIR_BOARDING_FIELD, columnForName);
         stop.platform_code  = getStringIfPresent(result, Stop.PLATFORM_CODE_FIELD, columnForName);
         stop.stop_area_ids  = getStringIfPresent(result, Stop.STOP_AREA_IDS_FIELD, columnForName);
+        stop.tts_stop_name = getStringIfPresent(result, Stop.TTS_STOP_NAME_FIELD, columnForName);
         return stop;
     };
 
@@ -206,6 +207,7 @@ public interface EntityPopulator<T> {
         trip.route_id        = getStringIfPresent(result, "route_id", columnForName);
         trip.service_id      = getStringIfPresent(result, "service_id", columnForName);
         trip.trip_headsign   = getStringIfPresent(result, "trip_headsign", columnForName);
+        trip.tts_trip_headsign   = getStringIfPresent(result, "tts_trip_headsign", columnForName);
         trip.trip_short_name = getStringIfPresent(result, "trip_short_name", columnForName);
         trip.block_id        = getStringIfPresent(result, "block_id", columnForName);
         trip.shape_id        = getStringIfPresent(result, "shape_id", columnForName);
