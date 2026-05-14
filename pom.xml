@@ -6,9 +6,9 @@
   <description>A library to load and index GTFS feeds of arbitrary size using disk-backed storage</description>
   <url>https://github.com/conveyal/gtfs-lib</url>
 
-  <groupId>com.conveyal</groupId>
+  <groupId>com.github.TransitScreen</groupId>
   <artifactId>gtfs-lib</artifactId>
-  <version>7.0.2</version>
+  <version>actionfigure-1.0</version>
   <packaging>jar</packaging>
 
   <licenses>
