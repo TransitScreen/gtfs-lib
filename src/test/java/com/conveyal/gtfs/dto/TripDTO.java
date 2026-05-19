@@ -4,6 +4,7 @@ public class TripDTO {
     public Integer id;
     public String trip_id;
     public String trip_headsign;
+    public String tts_trip_headsign;
     public String trip_short_name;
     public String block_id;
     public Integer direction_id;

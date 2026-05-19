@@ -207,6 +207,7 @@ public class GraphQLGtfsSchema {
         .field(MapFetcher.field("id", GraphQLInt))
         .field(MapFetcher.field("trip_id"))
         .field(MapFetcher.field("trip_headsign"))
+        .field(MapFetcher.field("tts_trip_headsign"))
         .field(MapFetcher.field("trip_short_name"))
         .field(MapFetcher.field("block_id"))
         .field(MapFetcher.field("direction_id", GraphQLInt))
@@ -361,6 +362,7 @@ public class GraphQLGtfsSchema {
         .field(MapFetcher.field(Stop.LOCATION_TYPE_FIELD, GraphQLInt))
         .field(MapFetcher.field(Stop.WHEELCHAIR_BOARDING_FIELD, GraphQLInt))
         .field(MapFetcher.field(Stop.STOP_AREA_IDS_FIELD))
+        .field(MapFetcher.field(Stop.TTS_STOP_NAME_FIELD))
         // Returns all stops that reference parent stop's stop_id
         .field(newFieldDefinition()
             .name("child_stops")
