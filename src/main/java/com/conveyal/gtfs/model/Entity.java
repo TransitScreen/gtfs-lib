@@ -542,7 +542,15 @@ public abstract class Entity implements Serializable {
      * Create a row from the column values provided.
      */
     protected static String createRow(String... columnValues) {
-        return String.join(",", columnValues) + System.lineSeparator();
+        String[] quoted = new String[columnValues.length];
+        for (int i = 0; i < columnValues.length; i++) {
+            String val = columnValues[i] == null ? "" : columnValues[i];
+            if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
+                val = "\"" + val.replace("\"", "\"\"") + "\"";
+            }
+            quoted[i] = val;
+        }
+        return String.join(",", quoted) + System.lineSeparator();
     }
 
     /**
