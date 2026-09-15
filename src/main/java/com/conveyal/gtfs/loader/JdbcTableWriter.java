@@ -780,33 +780,63 @@ public class JdbcTableWriter implements TableWriter {
     }
 
     /**
-     * Updates the non-timepoint stop times between two timepoints using the speed implied  by
-     * the travel time between them. Ignores any existing default_travel_time or default_dwell_time
-     * entered for the non-timepoint stops.
+     * Get the speed between timepoints (speed from previous timepoint to the next).
+     * We need this value to interpolate departure/arrival times between timepoints.
+     */
+    private List<Double> getSpeedBetweenTimepoints(List<PatternStop> patternStops, boolean interpolateStopTimes) {
+        List<Double> timepointSpeeds = new ArrayList<>();
+        int cumulativeTravelTime = 0;
+        int previousTravelTime = 0;
+        double previousShapeDistTraveled = 0;
+        if (interpolateStopTimes) {
+            for (int i = 0; i < patternStops.size(); i++) {
+                PatternStop patternStop = patternStops.get(i);
+                cumulativeTravelTime += patternStop.default_travel_time;
+                if (patternStop.timepoint == 1) {
+                    if (timepointSpeeds.isEmpty()) {
+                        // First one is always zero.
+                        timepointSpeeds.add(0.0);
+                    } else {
+                        if ((cumulativeTravelTime - previousTravelTime) == 0) {
+                            // Note: this is floating point division, so a zero denominator yields
+                            // Infinity or NaN rather than throwing, and would silently corrupt every
+                            // interpolated time that follows. Fail loudly instead.
+                            throw new IllegalStateException(String.format(
+                                "Cannot calculate timepoint speed: zero travel time between the previous timepoint and the timepoint at stop_sequence %d (stop_id %s).",
+                                patternStop.stop_sequence,
+                                patternStop.stop_id
+                            ));
+                        }
+                        double speed = (patternStop.shape_dist_traveled - previousShapeDistTraveled) / (cumulativeTravelTime - previousTravelTime);
+                        timepointSpeeds.add(speed);
+                    }
+                    previousShapeDistTraveled = patternStop.shape_dist_traveled;
+                    previousTravelTime = cumulativeTravelTime;
+                }
+            }
+        }
+
+        return timepointSpeeds;
+    }
+
+    /**
+     * Updates the non-timepoint stop times between two timepoints using the speed between timepoints,
+     * as calculated by getSpeedBetweenTimepoints. Ignores any existing default_travel_time or
+     * default_dwell_time entered for the non-timepoint stops.
      */
     private int interpolateTimesFromTimepoints(
         PatternStop patternStop,
-        List<PatternStop> timepoints,
+        List<Double> timepointsAndSpeeds,
         Integer timepointNumber,
         double previousShapeDistTraveled
     ) {
-        if (timepointNumber == 0 || timepoints.size() == 1 || timepointNumber >= timepoints.size()) {
+        if (timepointNumber == 0 || timepointsAndSpeeds.size() == 1 || timepointNumber >= timepointsAndSpeeds.size()) {
             throw new IllegalStateException("Issue in pattern stops which prevents interpolation (e.g. less than 2 timepoints)");
         }
-        PatternStop nextTimepoint = timepoints.get(timepointNumber);
-        PatternStop lastTimepoint = timepoints.get(timepointNumber-1);
 
-        if (
-            nextTimepoint == null ||
-            nextTimepoint.default_travel_time == Entity.INT_MISSING ||
-            nextTimepoint.shape_dist_traveled == Entity.DOUBLE_MISSING ||
-            lastTimepoint.shape_dist_traveled == Entity.DOUBLE_MISSING
-        ) {
-            throw new IllegalStateException("Error with stop time interpolation: timepoint or shape_dist_traveled is null");
-        }
+        double speed = timepointsAndSpeeds.get(timepointNumber);
 
-        double timepointSpeed = (nextTimepoint.shape_dist_traveled - lastTimepoint.shape_dist_traveled) / nextTimepoint.default_travel_time;
-        return (int) Math.round((patternStop.shape_dist_traveled - previousShapeDistTraveled) / timepointSpeed);
+        return (int) Math.round((patternStop.shape_dist_traveled - previousShapeDistTraveled) / speed);
     }
 
     /**
@@ -822,6 +852,8 @@ public class JdbcTableWriter implements TableWriter {
     private int updateStopTimesForPatternStops(List<PatternStop> patternStops, boolean interpolateStopTimes) throws SQLException {
         PatternStop firstPatternStop = patternStops.iterator().next();
         List<PatternStop> timepoints = patternStops.stream().filter(ps -> ps.timepoint == 1).collect(Collectors.toList());
+        List<Double> timepointsAndSpeeds = getSpeedBetweenTimepoints(patternStops, interpolateStopTimes);
+
         int firstStopSequence = firstPatternStop.stop_sequence;
         // Prepare SQL query to determine the time that should form the basis for adding the travel time values.
         int previousStopSequence = firstStopSequence > 0 ? firstStopSequence - 1 : 0;
@@ -857,33 +889,41 @@ public class JdbcTableWriter implements TableWriter {
             int cumulativeInterpolatedTime = cumulativeTravelTime;
             int timepointNumber = 0;
             double previousShapeDistTraveled = 0; // Used for calculating timepoint speed for interpolation
-            for (PatternStop patternStop : patternStops) {
+            for (int i = 0; i < patternStops.size(); i++) {
+                PatternStop patternStop = patternStops.get(i);
+
                 boolean isTimepoint = patternStop.timepoint == 1;
                 if (isTimepoint) timepointNumber++;
+
                 // Gather travel/dwell time for pattern stop (being sure to check for missing values).
                 int travelTime = patternStop.default_travel_time == Entity.INT_MISSING ? 0 : patternStop.default_travel_time;
+                // Track the non-interpolated travel time between stops.
+                cumulativeTravelTime += travelTime;
                 if (interpolateStopTimes) {
                     if (patternStop.shape_dist_traveled == Entity.DOUBLE_MISSING) {
                         throw new IllegalStateException("Shape_dist_traveled must be defined for all stops in order to perform interpolation");
                     }
                     // Override travel time if we're interpolating between timepoints.
-                    if (!isTimepoint) travelTime = interpolateTimesFromTimepoints(patternStop, timepoints, timepointNumber, previousShapeDistTraveled);
-                    previousShapeDistTraveled += patternStop.shape_dist_traveled;
+                    if (!isTimepoint) {
+                        travelTime = interpolateTimesFromTimepoints(patternStop, timepointsAndSpeeds, timepointNumber, previousShapeDistTraveled);
+                        cumulativeInterpolatedTime += travelTime;
+                    } else {
+                        // A timepoint must meet the target travel time, so we simply overwrite.
+                        cumulativeInterpolatedTime = cumulativeTravelTime;
+                    }
+                    previousShapeDistTraveled = patternStop.shape_dist_traveled;
                 }
+
                 int dwellTime = patternStop.default_dwell_time == Entity.INT_MISSING ? 0 : patternStop.default_dwell_time;
                 int oneBasedIndex = 1;
                 // Increase travel time by current pattern stop's travel and dwell times (and set values for update).
                 if (!isTimepoint && interpolateStopTimes) {
-                    // We don't want to increment the true cumulative travel time because that adjusts the timepoint
-                    // times later in the pattern.
                     // Dwell times are ignored right now as they do not fit the typical use case for interpolation.
                     // They may be incorporated by accounting for all dwell times in intermediate stops when calculating
                     // the timepoint speed.
-                    cumulativeInterpolatedTime += travelTime;
                     updateStopTimeStatement.setInt(oneBasedIndex++, cumulativeInterpolatedTime);
                     updateStopTimeStatement.setInt(oneBasedIndex++, cumulativeInterpolatedTime);
                 } else {
-                    cumulativeTravelTime += travelTime;
                     updateStopTimeStatement.setInt(oneBasedIndex++, cumulativeTravelTime);
                     cumulativeTravelTime += dwellTime;
                     updateStopTimeStatement.setInt(oneBasedIndex++, cumulativeTravelTime);
