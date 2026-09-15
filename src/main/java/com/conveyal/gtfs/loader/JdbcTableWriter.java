@@ -830,8 +830,14 @@ public class JdbcTableWriter implements TableWriter {
         Integer timepointNumber,
         double previousShapeDistTraveled
     ) {
-        if (timepointNumber == 0 || timepointsAndSpeeds.size() == 1 || timepointNumber >= timepointsAndSpeeds.size()) {
-            throw new IllegalStateException("Issue in pattern stops which prevents interpolation (e.g. less than 2 timepoints)");
+        if (timepointNumber == 0) {
+            throw new IllegalStateException("Normalization must begin at a timepoint");
+        }
+        if (timepointsAndSpeeds.size() == 1) {
+            throw new IllegalStateException("There must be at least 2 timepoints");
+        }
+        if (timepointNumber >= timepointsAndSpeeds.size()) {
+            throw new IllegalStateException("Issue in pattern stops which prevents interpolation");
         }
 
         double speed = timepointsAndSpeeds.get(timepointNumber);
